@@ -2,6 +2,8 @@
 
 A crawler that searches for text on internal web pages of a website.
 
+![WOW Demo](example/example.gif)
+
 ## Usage
 
 ```php
