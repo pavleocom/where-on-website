@@ -23,8 +23,9 @@ class UrlBuilderTest extends TestCase
     private const URL8 = 'ws://example.com';
     private const URL9 = 'HTTps://www.example.com/';
     private const URL10 = '/store/ssds';
-    private const URL11 = 'sub.www.example.co/online/';
+    private const URL11 = 'sub.www.example.com/online/';
     private const URL12 = 'http://www.example.com:8080/online/';
+    private const URL13 = 'http://www.example.com/online/deals/november/index.html';
 
     protected function setUp(): void
     {
@@ -64,7 +65,7 @@ class UrlBuilderTest extends TestCase
         $this->assertEquals('', $this->urlBuilderTraitMock->getPath(self::URL8));
         $this->assertEquals('/', $this->urlBuilderTraitMock->getPath(self::URL9));
         $this->assertEquals('/store/ssds', $this->urlBuilderTraitMock->getPath(self::URL10));
-        $this->assertEquals('sub.www.example.co/online/', $this->urlBuilderTraitMock->getPath(self::URL11));
+        $this->assertEquals('sub.www.example.com/online/', $this->urlBuilderTraitMock->getPath(self::URL11));
         $this->assertEquals('/online/', $this->urlBuilderTraitMock->getPath(self::URL12));
     }
 
@@ -112,6 +113,37 @@ class UrlBuilderTest extends TestCase
             $this->urlBuilderTraitMock->buildDownstreamUrl(self::URL6, self::URL12));
         $this->assertEquals('ws://example.com/articles/nature/climate-change', 
             $this->urlBuilderTraitMock->buildDownstreamUrl(self::URL6, self::URL8));
+    }
+
+    public function testBuildUpstreamUrlReturnsCorrectValue()
+    {
+        $this->assertEquals('http://www.example.com/some-page.html', 
+            $this->urlBuilderTraitMock->buildUpstreamUrl(self::URL1, self::URL13));
+        $this->assertEquals('http://example.com/store/ssds', 
+            $this->urlBuilderTraitMock->buildUpstreamUrl('..'.self::URL10, self::URL5));
+        $this->assertEquals('http://www.example.com:8080/articles/nature/climate-change', 
+            $this->urlBuilderTraitMock->buildUpstreamUrl('../'.self::URL6, self::URL12));
+        $this->assertEquals('http://sub.www.example.com/articles/nature/climate-change', 
+            $this->urlBuilderTraitMock->buildUpstreamUrl('../'.self::URL6, 'http://'.self::URL11));   
+    }
+
+    public function testBuildAbsoluteUrlReturnsCorrectValue()
+    {
+        $this->assertEquals('http://www.example.com/some-page.html', 
+            $this->urlBuilderTraitMock->buildAbsoluteUrl(self::URL1, self::URL13));
+        $this->assertEquals('http://sub.www.example.com/articles/nature/climate-change', 
+            $this->urlBuilderTraitMock->buildAbsoluteUrl('../'.self::URL6, 'http://'.self::URL11));
+        $this->assertEquals('http://example.com/articles/nature/climate-change', 
+            $this->urlBuilderTraitMock->buildAbsoluteUrl(self::URL6, self::URL3));
+        $this->assertFalse($this->urlBuilderTraitMock->buildAbsoluteUrl('//google.com', self::URL3));
+        $this->assertFalse($this->urlBuilderTraitMock->buildAbsoluteUrl('http://google.com', self::URL5));
+        $this->assertEquals('http://www.example.com/store/ssds', 
+            $this->urlBuilderTraitMock->buildAbsoluteUrl(self::URL10, self::URL13));
+        $this->assertFalse($this->urlBuilderTraitMock->buildAbsoluteUrl(self::URL7, self::URL13));
+        $this->assertEquals('//www.example.com/news', 
+            $this->urlBuilderTraitMock->buildAbsoluteUrl('//www.example.com/news', self::URL13));
+        $this->assertEquals('HTTps://www.example.com/', 
+            $this->urlBuilderTraitMock->buildAbsoluteUrl(self::URL9, self::URL2));
     }
 
 }

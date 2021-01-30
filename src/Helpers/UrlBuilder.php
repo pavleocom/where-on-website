@@ -7,7 +7,7 @@ use InvalidArgumentException;
 trait UrlBuilder
 {
 
-        /**
+    /**
      * Returns absolute URL of internal web page or false if external URL;
      * @param string $hrefValue
      * @param string $url (of the webpage containing anchor element with the above href value)
@@ -18,34 +18,30 @@ trait UrlBuilder
         if (preg_match('/^\/[^\/]/', $hrefValue) === 1) { 
             // starts with / but not // - internal root 
             return $this->getBaseUrl($url) . $hrefValue;
-
-        } else if (preg_match('/^[^\/]/', $hrefValue) === 1 
+        } else if (preg_match('/^[^\/\.]/', $hrefValue) === 1 
                     && strpos($hrefValue, ':') === false) { 
-            // does not start with / and does not contain : - internal relative downstream
+            // does not start with / or . and does not contain : - internal relative downstream
             return $this->buildDownstreamUrl($hrefValue, $url);
-
         } else if (preg_match('/^\.\./', $hrefValue) === 1) { 
             // starts with .. - internal relative upstream
             return $this->buildUpstreamUrl($hrefValue, $url);
-
-        } else if (strpos($hrefValue, $this->getBaseUrl($url)) === 0) { 
+        } else if (strpos(strtolower($hrefValue), $this->getBaseUrl($url)) === 0) { 
             // internal absolute
             return $hrefValue;
-
         } else if (preg_match('/^\/\//', $hrefValue)
                     && $this->getHost($hrefValue) === $this->getHost($url)) {
-            // internal absolute without scheme
+            // internal absolute without scheme 
             return  $hrefValue;
-
         } else {
-
-            return false; // external link or invalid
-
+            // external link or invalid
+            return false; 
         }
     }
 
     /**
      * Extracts base url from absolute url. Must be absolute url scheme://host
+     * @param string $url
+     * @return string $baseUrl
      */
     public function getBaseUrl(string $url)
     {
@@ -135,17 +131,31 @@ trait UrlBuilder
     public function buildUpstreamUrl(string $relativeUrl, string $url)
     {
         $backSteps = $this->countBackSteps($relativeUrl);
-        $path = trim($this->getPath($url), '/');
+        $path = $this->getPath($url);
         $pathParts = explode('/', $path);
         $pathPartsCount = count($pathParts);
+
+        $lastForwardSlashPosition = strpos($path, strrchr($path, '/')) + 1; 
+
+        if (substr($path, $lastForwardSlashPosition) !== '') {
+            $pathPartsCount -= 1;
+            array_pop($pathParts);
+        }
 
         if ($backSteps <= $pathPartsCount) {
             $remainingParts = array_slice($pathParts, 0, $pathPartsCount - $backSteps);
 
-            preg_match('/^[../]*(?<remaining>.*)$/', $relativeUrl, $matches);
+            preg_match('/^[\.\.\/]*(?<remaining>.*)$/', $relativeUrl, $matches);
 
             if (isset($matches['remaining'])) {
-                return $this->getBaseUrl($url) . '/' . implode('/', $remainingParts) . '/' . $matches['remaining'];
+
+                if (count($remainingParts) > 0) {
+                    $remainingUrlPart = implode('/', $remainingParts) . '/' . $matches['remaining'];
+                } else {
+                    $remainingUrlPart = $matches['remaining'];
+                }
+
+                return $this->getBaseUrl($url) . '/' . trim($remainingUrlPart, '/');
             }
             
         }
@@ -153,6 +163,12 @@ trait UrlBuilder
         return false;
     }
 
+
+    /**
+     * Counts how many directories to go back
+     * @param string $url (relative url e.g: ../../page.html)
+     * @return int $count
+     */
     public function countBackSteps($url)
     {
         $parts = explode('/', $url);
